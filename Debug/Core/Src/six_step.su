@@ -1,0 +1,7 @@
+six_step.c:17:6:SS_Init	4	static
+six_step.c:25:6:SS_Commutate_Type1	112	static
+six_step.c:56:6:SS_Commutate_type2	72	static
+six_step.c:75:6:SS_Commutate_Type3	80	static
+six_step.c:104:6:SS_Commutate_Type4	112	static
+six_step.c:139:6:SS_Commutate_Type5	112	static
+six_step.c:173:6:SS_Commutate_Type6	72	static
