@@ -1,2 +1,2 @@
-hall_sensors.c:24:6:HS_Init	8	static
-hall_sensors.c:32:9:HS_Calculate_State	24	static
+../Core/Src/hall_sensors.c:24:6:HS_Init	8	static
+../Core/Src/hall_sensors.c:32:9:HS_Calculate_State	24	static

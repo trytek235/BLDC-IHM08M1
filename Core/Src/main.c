@@ -19,6 +19,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "rtc.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
@@ -29,6 +30,7 @@
 #include "debug.h"
 #include "globals.h"
 #include "six_step.h"
+#include <stdbool.h>
 
 /* USER CODE END Includes */
 
@@ -49,7 +51,14 @@ int __io_putchar(int ch)
     HAL_UART_Transmit(&huart2, (uint8_t*)&ch, 1, HAL_MAX_DELAY);
     return 1;
 }
-
+/*bool is_button_pressed(void)
+{
+  if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_RESET) {
+    return true;
+  } else {
+    return false;
+  }
+}*/
 #define LINE_MAX_LENGTH	80
 
 static char line_buffer[LINE_MAX_LENGTH + 1];
@@ -129,7 +138,9 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
+  void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
+	  HAL_GPIO_WritePin(B1_GPIO_Port, B1_Pin, HAL_GPIO_ReadPin(LD3_GPIO_Port, LD3_Pin));
+  }
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -145,6 +156,7 @@ int main(void)
   MX_TIM7_Init();
   MX_TIM3_Init();
   MX_TIM1_Init();
+  MX_RTC_Init();
   /* USER CODE BEGIN 2 */
 
   // welcome message
@@ -163,11 +175,19 @@ int main(void)
   uint8_t revolution;
   uint8_t delay=5;
 
+  bool refresh = false;
+
   HAL_SYSTICK_Callback();
   // start timers
 //  HAL_TIM_Base_Start_IT(&htim6);
   HAL_TIM_Base_Start_IT(&htim7);
 
+  RTC_DateTypeDef today;
+  today.Year = 22;
+  today.Month = 03;
+  today.Date = 24;
+  today.WeekDay = RTC_WEEKDAY_TUESDAY;
+  HAL_RTC_SetDate(&hrtc, &today, RTC_FORMAT_BIN);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -176,6 +196,40 @@ int main(void)
 
   while (1)
   {
+	  //printf("systick = %lu\n", HAL_GetTick());
+	  /*HAL_StatusTypeDef HAL_RTC_GetTime(RTC_HandleTypeDef *hrtc, RTC_TimeTypeDef *sTime, uint32_t Format);
+	  HAL_StatusTypeDef HAL_RTC_GetDate(RTC_HandleTypeDef *hrtc, RTC_DateTypeDef *sDate, uint32_t Format);*/
+
+	/*  RTC_TimeTypeDef time;
+	  RTC_DateTypeDef date;
+
+	  if (is_button_pressed()) {
+	  	// ważne: nieużywane pola muszą być wyzerowane
+	  	RTC_TimeTypeDef new_time = {0};
+
+	  	// czekamy na zwolnienie przycisku
+	  	while (is_button_pressed()) {}
+
+	  	// ustawiamy godzinę 07:45:00
+	  	new_time.Hours = 13;
+	  	new_time.Minutes = 30;
+	  	new_time.Seconds = 0;
+	  	HAL_RTC_SetTime(&hrtc, &new_time, RTC_FORMAT_BIN);
+	  }
+
+	  HAL_RTC_GetTime(&hrtc, &time, RTC_FORMAT_BIN);
+	  HAL_RTC_GetDate(&hrtc, &date, RTC_FORMAT_BIN);
+
+	  printf("RTC: %04d-%02d-%02d, %02d:%02d:%02d\n", 2000 + date.Year, date.Month, date.Date, time.Hours, time.Minutes, time.Seconds);
+	  HAL_Delay(200);*/
+
+	 /* int i;
+
+	  //for (i = 0; i < 10; i++)
+		if (is_button_pressed()){
+	    HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+	    HAL_Delay(100);
+	  }*/
 	  HAL_GPIO_WritePin(S1_H_GPIO_Port, S1_H_Pin, GPIO_PIN_RESET);
 	  HAL_GPIO_WritePin(S1_L_GPIO_Port, S1_L_Pin, GPIO_PIN_RESET);
 	  HAL_GPIO_WritePin(S2_H_GPIO_Port, S2_H_Pin, GPIO_PIN_RESET);
@@ -183,10 +237,20 @@ int main(void)
 	  HAL_GPIO_WritePin(S3_H_GPIO_Port, S3_H_Pin, GPIO_PIN_RESET);
 	  HAL_GPIO_WritePin(S3_L_GPIO_Port, S3_L_Pin, GPIO_PIN_RESET);
 	  //HAL_Delay(100);
-	  /*if(val_HS>3)
+	/*  if(val_HS>3)
 		  val_HS=val_HS-3;
 */
-
+	  val_H1 = HAL_GPIO_ReadPin(H1_GPIO_Port, H1_Pin);
+	  val_H2 = HAL_GPIO_ReadPin(H2_GPIO_Port, H2_Pin);
+	  val_H3 = HAL_GPIO_ReadPin(H3_GPIO_Port, H3_Pin);
+	  val_HS = HS_Calculate_State();
+	  if(val_HS == 6 && val_HS != val_HS_OLD && val_HS != val_HS_OLD-1)
+	  {
+		  counter++;
+	  		  }
+	  if(val_HS != val_HS_OLD && val_HS != val_HS_OLD-1){
+		  refresh = true;
+	  }
 	  switch (val_HS)
 	  {
 	  case 1:
@@ -215,16 +279,15 @@ int main(void)
 	  //default:
 	  }
 	  HAL_Delay(delay);
-		  val_H1 = HAL_GPIO_ReadPin(H1_GPIO_Port, H1_Pin);
-		  val_H2 = HAL_GPIO_ReadPin(H2_GPIO_Port, H2_Pin);
-		  val_H3 = HAL_GPIO_ReadPin(H3_GPIO_Port, H3_Pin);
-		  val_HS = HS_Calculate_State();
-		  if(val_HS == 6 && val_HS != val_HS_OLD && val_HS != val_HS_OLD-1){
-			  counter++;
+
+
+		  if(refresh)
+		  {
+			  val_HS_OLD = val_HS;
+			  revolution = counter/15;
+			  printf("Sensor 1: %d   Sensor 2: %d   Sensor3: %d    HS: %d    Counter: %d  Revolution: %d\n ",val_H1,val_H2,val_H3,val_HS, counter, revolution);
+			  refresh = false;
 		  }
-		  val_HS_OLD = val_HS;
-		  revolution = counter/15;
-		  printf("Sensor 1: %d   Sensor 2: %d   Sensor3: %d    HS: %d    Counter: %d  Revolution: %d\n ",val_H1,val_H2,val_H3,val_HS, counter, revolution);
 
 
     /* USER CODE END WHILE */
@@ -283,11 +346,13 @@ void SystemClock_Config(void)
   */
   __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE3);
+
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE|RCC_OSCILLATORTYPE_LSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.LSEState = RCC_LSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 4;
@@ -299,6 +364,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+
   /** Initializes the CPU, AHB and APB buses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
@@ -346,4 +412,3 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
-
